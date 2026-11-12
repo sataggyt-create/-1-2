@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الحصص - أفكار تصميمية</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root {
+            /* الألوان الافتراضية (Modern UI) */
+            --bg-body: #f1f5f9;
+            --bg-container: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --header-bg: #1e293b;
+            --header-text: #ffffff;
+            --border-color: #e2e8f0;
+            --day-bg: #f8fafc;
+            --row-even: #f8fafc;
+        }
+
+        /* ثيم تلوين المواد (Pastel) */
+        .theme-pastel {
+            --bg-body: #f8fafc;
+            --bg-container: #ffffff;
+            --text-main: #1e293b;
+            --header-bg: #f1f5f9;
+            --header-text: #1e293b;
+            --border-color: #e2e8f0;
+            --day-bg: #e2e8f0;
+            --row-even: #ffffff;
+        }
+
+        /* ثيم الوضع الليلي (Dark Mode) */
+        .theme-dark {
+            --bg-body: #0f172a;
+            --bg-container: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --header-bg: #020617;
+            --header-text: #38bdf8;
+            --border-color: #334155;
+            --day-bg: #1e293b;
+            --row-even: #1e293b;
+        }
+
+        /* ثيم الطباعة الرسمية (Classic Print) */
+        .theme-classic {
+            --bg-body: #e5e5e5;
+            --bg-container: #ffffff;
+            --text-main: #000000;
+            --text-sub: #333333;
+            --header-bg: #ffffff;
+            --header-text: #000000;
+            --border-color: #000000;
+            --day-bg: #f5f5f5;
+            --row-even: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            margin: 0;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s ease;
+        }
+
+        /* لوحة التحكم (الأزرار) */
+        .controls {
+            margin-bottom: 30px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .controls button, .controls select {
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .theme-btn { background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        .theme-btn.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        
+        .btn-action { background-color: #10b981; color: white; }
+        .btn-action:hover { background-color: #059669; transform: translateY(-2px); }
+
+        .btn-pdf { background-color: #ef4444; color: white; }
+        .btn-pdf:hover { background-color: #dc2626; transform: translateY(-2px); }
+
+        /* حاوية الجدول */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            display: flex;
+            justify-content: center;
+            padding-bottom: 20px;
+        }
+
+        #timetable-container {
+            background-color: var(--bg-container);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            width: 1400px; 
+            min-width: 1400px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* الترويسة */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            color: var(--text-main);
+            font-weight: 900;
+        }
+
+        .header h3 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--text-main);
+            font-weight: 700;
+            background: var(--border-color);
+            display: inline-block;
+            padding: 6px 30px;
+            border-radius: 30px;
+        }
+
+        /* الجدول */
+        table {
+            width: 100%;
+            border-collapse: collapse; 
+            table-layout: fixed;
+            border: 2px solid var(--border-color);
+        }
+
+        th, td {
+            padding: 15px 10px;
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            transition: background-color 0.3s ease;
+        }
+
+        th {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            font-weight: 800;
+            font-size: 16px;
+            border-bottom: 3px solid var(--border-color);
+        }
+
+        td.day-col {
+            background-color: var(--day-bg);
+            font-weight: 900;
+            font-size: 18px;
+            white-space: nowrap;
+            border-left: 2px solid var(--border-color);
+            width: 120px;
+        }
+
+        tbody tr:nth-child(even) td:not(.day-col) {
+            background-color: var(--row-even);
+        }
+
+        /* تمييز اليوم الحالي */
+        .today-row td {
+            background-color: #fef08a !important; /* أصفر فاتح */
+            color: #854d0e !important;
+            border-color: #eab308 !important;
+        }
+        .theme-dark .today-row td {
+            background-color: #422006 !important; /* أصفر داكن للوضع الليلي */
+            color: #fde047 !important;
+        }
+
+        /* تنسيق النصوص داخل الخلايا */
+        .subject {
+            font-weight: 800;
+            display: block;
+            margin-bottom: 4px;
+            font-size: 17px;
+        }
+
+        .teacher {
+            font-size: 14px;
+            color: var(--text-sub);
+            display: block;
+            font-weight: 600;
+        }
+
+        /* تلوين المواد (يُطبق فقط في ثيم الباستيل) */
+        .theme-pastel td[data-subject="arabic"] { background-color: #dcfce7 !important; color: #166534; }
+        .theme-pastel td[data-subject="math"] { background-color: #dbeafe !important; color: #1e40af; }
+        .theme-pastel td[data-subject="science"] { background-color: #ffedd5 !important; color: #9a3412; }
+        .theme-pastel td[data-subject="english"] { background-color: #f3e8ff !important; color: #6b21a8; }
+        .theme-pastel td[data-subject="studies"] { background-color: #e0f2fe !important; color: #075985; }
+        .theme-pastel td[data-subject="computer"] { background-color: #fce7f3 !important; color: #9d174d; }
+        .theme-pastel td[data-subject="art"] { background-color: #fef08a !important; color: #854d0e; }
+        .theme-pastel td[data-subject="religion"] { background-color: #ccfbf1 !important; color: #115e59; }
+        .theme-pastel .teacher { color: inherit; opacity: 0.8; }
+
+        /* تنسيق خلية النشاط */
+        .activity-cell {
+            background-color: #fff7ed;
+            border: 2px dashed #f97316 !important;
+            text-align: center;
+            padding: 10px !important;
+            font-size: 14px;
+            line-height: 1.6;
+            font-weight: 700;
+            color: #9a3412;
+            border-radius: 8px;
+            margin: 5px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- لوحة التحكم والأفكار -->
+    <div class="controls">
+        <span style="font-weight: bold; color: #333; margin: 10px;">اختر ستايل الجدول:</span>
+        <button class="theme-btn active" onclick="changeTheme('theme-modern', this)">عصري ونظيف</button>
+        <button class="theme-btn" onclick="changeTheme('theme-pastel', this)">تلوين المواد 🎨</button>
+        <button class="theme-btn" onclick="changeTheme('theme-dark', this)">وضع ليلي 🌙</button>
+        <button class="theme-btn" onclick="changeTheme('theme-classic', this)">رسمي للطباعة 📄</button>
+        
+        <div style="width: 2px; background: #ddd; margin: 0 10px;"></div> <!-- فاصل -->
+
+        <button class="theme-btn" onclick="highlightToday()">تحديد اليوم 📍</button>
+        <button class="btn-action" onclick="downloadSquarePNG()">تحميل صورة (PNG)</button>
+        <button class="btn-pdf" onclick="downloadPDF()">تحميل PDF</button>
+    </div>
+
+    <div class="table-wrapper">
+        <!-- الحاوية الرئيسية مع الثيم الافتراضي -->
+        <div id="timetable-container" class="theme-modern">
+            <div class="header">
+                <h2>مدرسة الشهيد أحمد محمد فوزي ع للبنين</h2>
+                <h3>جدول حصص الفصل 1/2</h3>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th class="day-header">اليوم</th>
+                        <th>الأولى</th>
+                        <th>الثانية</th>
+                        <th>الثالثة</th>
+                        <th>الرابعة</th>
+                        <th>الخامسة</th>
+                        <th>السادسة</th>
+                        <th>السابعة</th>
+                        <th>الثامنة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- الأحد -->
+                    <tr>
+                        <td class="day-col">الأحد</td>
+                        <td colspan="2" data-subject="studies"><span class="subject">دراسات</span><span class="teacher">هبه الدسوقي</span></td>
+                        <td colspan="2" data-subject="english"><span class="subject">لغة انجليزية</span><span class="teacher">اشرف طه</span></td>
+                        <td data-subject="computer"><span class="subject">كمبيوتر</span><span class="teacher">يحي هاشم</span></td>
+                        <td colspan="2" data-subject="arabic"><span class="subject">لغة عربية</span><span class="teacher">حنان دياب</span></td>
+                        <td></td>
+                    </tr>
+
+                    <!-- الاثنين -->
+                    <tr>
+                        <td class="day-col">الاثنين</td>
+                        <td colspan="2" data-subject="math"><span class="subject">رياضيات</span><span class="teacher">هبه احمد ابراهيم</span></td>
+                        <td data-subject="religion"><span class="subject">تربية دينية</span></td>
+                        <td></td>
+                        <td colspan="2" data-subject="arabic"><span class="subject">لغة عربية</span><span class="teacher">حنان دياب</span></td>
+                        <td colspan="2" data-subject="studies"><span class="subject">دراسات</span><span class="teacher">هبه الدسوقي</span></td>
+                    </tr>
+
+                    <!-- الثلاثاء -->
+                    <tr>
+                        <td class="day-col">الثلاثاء</td>
+                        <td colspan="2" data-subject="religion"><span class="subject">تربية دينية</span></td>
+                        <td colspan="2" data-subject="math"><span class="subject">رياضيات</span><span class="teacher">هبه احمد ابراهيم</span></td>
+                        <td><span class="subject">نشاط ٢</span><span class="teacher">محمود الجنيدي</span></td>
+                        <td colspan="2" data-subject="english"><span class="subject">لغة انجليزية</span><span class="teacher">اشرف طه</span></td>
+                        <td></td>
+                    </tr>
+
+                    <!-- الأربعاء -->
+                    <tr>
+                        <td class="day-col">الأربعاء</td>
+                        <td colspan="2" data-subject="math"><span class="subject">رياضيات</span><span class="teacher">هبه احمد ابراهيم</span></td>
+                        <td colspan="2" data-subject="arabic"><span class="subject">لغة عربية</span><span class="teacher">حنان دياب</span></td>
+                        <td data-subject="art"><span class="subject">تربية فنية</span><span class="teacher">وفاء اللان</span></td>
+                        <td colspan="2" data-subject="science"><span class="subject">علوم</span><span class="teacher">ايمان عبد السلام</span></td>
+                        <td></td>
+                    </tr>
+
+                    <!-- الخميس -->
+                    <tr>
+                        <td class="day-col">الخميس</td>
+                        <td colspan="2" data-subject="science"><span class="subject">علوم</span><span class="teacher">ايمان عبد السلام</span></td>
+                        <td colspan="2" data-subject="english"><span class="subject">لغة انجليزية</span><span class="teacher">اشرف طه</span></td>
+                        <td>
+                            <div class="activity-cell">
+                                تربية رياضية<br>
+                                تربية موسيقية<br>
+                                تربية مكتبية
+                            </div>
+                        </td>
+                        <td colspan="2" data-subject="arabic"><span class="subject">لغة عربية</span><span class="teacher">حنان دياب</span></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 1. دالة تغيير الثيم
+        function changeTheme(themeClass, btnElement) {
+            const container = document.getElementById('timetable-container');
+            // إزالة كل الثيمات السابقة
+            container.className = ''; 
+            // إضافة الثيم الجديد
+            container.classList.add(themeClass);
+            
+            // تحديث شكل الأزرار
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+        }
+
+        // 2. دالة تحديد اليوم الحالي
+        function highlightToday() {
+            const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+            const today = new Date().getDay(); // 0 للأحد، 1 للاثنين...
+            const todayName = days[today];
+            
+            const rows = document.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                // إزالة التظليل عن كل الصفوف أولاً
+                row.classList.remove('today-row');
+                // إذا كان اسم اليوم في هذا الصف يطابق اليوم الحالي، قم بتظليله
+                const dayCell = row.querySelector('.day-col');
+                if (dayCell && dayCell.innerText.trim() === todayName) {
+                    row.classList.add('today-row');
+                }
+            });
+
+            // إذا كان اليوم جمعة أو سبت، لن يتم تظليل شيء لأنها ليست في الجدول
+            if(today === 5 || today === 6) {
+                alert("اليوم إجازة (لا توجد حصص) 🎉");
+            }
+        }
+
+        // دالة مساعدة لانتظار تحميل الخطوط
+        async function waitForFonts() {
+            await document.fonts.ready;
+        }
+
+        // 3. تحميل كصورة PNG (جودة عالية)
+        async function downloadSquarePNG() {
+            await waitForFonts();
+            const element = document.getElementById('timetable-container');
+            
+            // حفظ العرض الأصلي وإجبار العرض الكبير للتصوير
+            const originalWidth = element.style.width;
+            element.style.width = '1400px';
+
+            html2canvas(element, { 
+                scale: 3, 
+                backgroundColor: null, // تأخذ لون الخلفية من الثيم الحالي
+                width: 1400,
+                windowWidth: 1400,
+                useCORS: true
+            }).then(canvas => {
+                element.style.width = originalWidth;
+                
+                // تحميل مباشر للصورة (بدون إضافة إطار أبيض، الصورة ستأخذ ألوان الثيم)
+                const link = document.createElement('a');
+                link.download = 'جدول_الحصص.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // 4. تحميل كملف PDF (حجم صغير جداً وجودة ممتازة)
+        async function downloadPDF() {
+            await waitForFonts();
+            const element = document.getElementById('timetable-container');
+            
+            const originalWidth = element.style.width;
+            element.style.width = '1400px';
+
+            html2canvas(element, { 
+                scale: 2, 
+                backgroundColor: null,
+                width: 1400,
+                windowWidth: 1400,
+                useCORS: true
+            }).then(canvas => {
+                element.style.width = originalWidth;
+
+                // استخدام JPEG لضغط الحجم
+                const imgData = canvas.toDataURL('image/jpeg', 0.9); 
+                const { jsPDF } = window.jspdf;
+                
+                const pdf = new jsPDF('l', 'mm', 'a4'); 
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                
+                const imgProps = pdf.getImageProperties(imgData);
+                
+                const margin = 10;
+                const availableWidth = pageWidth - (margin * 2);
+                const availableHeight = pageHeight - (margin * 2);
+
+                const widthRatio = availableWidth / imgProps.width;
+                const heightRatio = availableHeight / imgProps.height;
+                const bestRatio = Math.min(widthRatio, heightRatio);
+
+                const finalWidth = imgProps.width * bestRatio;
+                const finalHeight = imgProps.height * bestRatio;
+
+                const x = (pageWidth - finalWidth) / 2;
+                const y = (pageHeight - finalHeight) / 2;
+
+                pdf.addImage(imgData, 'JPEG', x, y, finalWidth, finalHeight);
+                pdf.save('جدول_الحصص.pdf');
+            });
+        }
+    </script>
+</body>
+</html>
